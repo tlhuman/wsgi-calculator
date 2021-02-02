@@ -41,17 +41,81 @@ To submit your homework:
 
 """
 
+def responce_404():
+    """not found or bad url"""
+    return "404 Not Found", "404<br>NOT FOUND"
+
+def responce_500():
+    """misc errors"""
+    return "500 Internal Server Error", "500<br>INTERNAL SERVER ERROR"
+
+def responce_403():
+    """forbidden data errors"""
+    return "403 Forbidden", "403<br>FORBIDDEN - BAD ARGUMENTS"
 
 def add(*args):
     """ Returns a STRING with the sum of the arguments """
+    total = float(args[0])
+    for arg in args[1:]:
+        try:
+            total += float(arg)
+        except ValueError:
+            raise NameError
 
-    # TODO: Fill sum with the correct value, based on the
-    # args provided.
-    sum = "0"
+    return str(total)
 
-    return sum
+def subtract(*args):
+    """ Returns a STRING with the subtraction of the arguments """
+    total = float(args[0])
+    for arg in args[1:]:
+        try:
+            total -= float(arg)
+        except ValueError:
+            raise NameError
 
-# TODO: Add functions for handling more arithmetic operations.
+    return str(total)
+
+def multiply(*args):
+    """ Returns a STRING with the multiplication of the arguments """
+    total = float(args[0])
+    for arg in args[1:]:
+        try:
+            total *= float(arg)
+        except ValueError:
+            raise NameError
+
+    return str(total)
+
+def divide(*args):
+    """ Returns a STRING with the division of the arguments """
+    total = float(args[0])
+    for arg in args[1:]:
+        try:
+            total /= float(arg)
+        except ValueError:
+            raise NameError
+
+    return str(total)
+
+def index(*args):
+    return '\n'.join(["<html>",
+                      "<head>",
+                      "<title>A calculator</title>",
+                      "<h1>Welcome to the Calculator!</h1>"
+                      "</head>",
+                      "<body>",
+                      "<p>Use the URL to do some math.</p>",
+                      "<p></p>",
+                      "<p></p>",
+                      "<p>Like this!</p>",
+                      "<p>.../multiply/3/5   => 15</p>",
+                      "<p>.../add/23/42      => 65</p>",
+                      "<p>.../subtract/23/42 => -19</p>",
+                      "<p>.../divide/22/11   => 2</p>",
+                      "</body>",
+                      "</html>",
+                      ])
+
 
 def resolve_path(path):
     """
@@ -59,12 +123,24 @@ def resolve_path(path):
     arguments.
     """
 
-    # TODO: Provide correct values for func and args. The
-    # examples provide the correct *syntax*, but you should
-    # determine the actual values of func and args using the
-    # path.
-    func = add
-    args = ['25', '32']
+    func_dict = {"add": add,
+                 "subtract": subtract,
+                 "multiply": multiply,
+                 "divide": divide,
+                 "": index}
+
+    # delimit to segments
+    path_parts = path.strip("/").split("/")
+
+    # variable assign
+    func_name = path_parts[0]
+    args = path_parts[1:]
+
+    # function test
+    try:
+        func = func_dict[func_name]
+    except KeyError:
+        raise NameError
 
     return func, args
 
@@ -76,9 +152,29 @@ def application(environ, start_response):
     #
     # TODO (bonus): Add error handling for a user attempting
     # to divide by zero.
-    pass
+    try:
+        request_path = environ.get('PATH_INFO', "")
+        if not request_path:
+            raise NameError
+        func, args = resolve_path(request_path)
+        status = "200 OK"
+        body = func(*args)
+    except NameError:
+        status, body = responce_404()
+    except ZeroDivisionError:
+        # forbidden variable error
+        status, body = responce_403()
+    except Exception as e:
+        status, body = responce_500()
+        body += f"<br><span>{str(e)}</span>"
+
+    response_headers = [('Content-Type', 'text/html'),
+                        ]
+    start_response(status, response_headers)
+    return [body.encode('utf8')]
+
 
 if __name__ == '__main__':
-    # TODO: Insert the same boilerplate wsgiref simple
-    # server creation that you used in the book database.
-    pass
+    from wsgiref.simple_server import make_server
+    srv = make_server('localhost', 8080, application)
+    srv.serve_forever()
